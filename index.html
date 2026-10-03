@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CRY WOLF — D&D 5e Abyssal Encounter</title>
+  <meta name="description" content="A tabletop RPG and Dungeons & Dragons styled 3D interactive horror encounter featuring Cry Wolf. Roll D20, cast forbidden relics, and survive the abyssal hunger.">
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <!-- Layer 1: Cursor-Reactive Depressive Canvas Background -->
+  <canvas id="bgCanvas"></canvas>
+
+  <!-- Layer 2: 3D WebGL Canvas for CRY_WOLF & Cavern -->
+  <canvas id="webglCanvas"></canvas>
+
+  <!-- Layer 3: 2D Screen Blood Splatter & Dripping Gore -->
+  <canvas id="bloodCanvas"></canvas>
+
+  <!-- Layer 4: Vignette & Atmosphere Filters -->
+  <div class="vignette-overlay"></div>
+  <div id="starvationPulse" class="starvation-pulse"></div>
+
+  <!-- D&D Arcane Targeting Reticle -->
+  <div id="cursorReticle" class="cursor-reticle">
+    <div class="reticle-ring"></div>
+    <div class="reticle-runes">ᚠ ᚢ ᚦ ᚨ</div>
+    <div class="reticle-dot"></div>
+  </div>
+
+  <!-- D20 Dice Roll Popover Notification -->
+  <div id="diceBanner" class="dice-banner hidden">
+    <div class="dice-icon-box">
+      <svg class="d20-svg" viewBox="0 0 100 100">
+        <polygon points="50,5 92,28 92,72 50,95 8,72 8,28" fill="#2d1c0b" stroke="#d4af37" stroke-width="3"/>
+        <polyline points="50,5 50,95" stroke="#d4af37" stroke-width="1.5" stroke-dasharray="2,2"/>
+        <polyline points="50,5 8,72 92,72 50,5" stroke="#d4af37" stroke-width="2"/>
+        <polyline points="8,28 92,28 50,95 8,28" stroke="#d4af37" stroke-width="2"/>
+        <text id="d20RollNumber" x="50" y="58" text-anchor="middle" fill="#f5e6c8" font-size="24" font-weight="bold" font-family="'Cinzel', serif">20</text>
+      </svg>
+    </div>
+    <div class="dice-text-group">
+      <span id="diceTitle" class="dice-title">D20 CHECK: SACRIFICE DC</span>
+      <span id="diceDesc" class="dice-desc">Natural 20! The Beast devours greedily!</span>
+    </div>
+  </div>
+
+  <!-- Layer 5: Tabletop RPG User Interface -->
+  <div class="ui-layer">
+    <!-- Top D&D Encounter Banner -->
+    <header class="top-bar">
+      <div class="dnd-encounter-card">
+        <div class="heraldic-shield">
+          <span class="shield-sigil">🐉</span>
+        </div>
+        <div class="encounter-info">
+          <div class="encounter-badge">ENCOUNTER: BOSS FIGHT</div>
+          <h1 class="game-title">Cry Wolf</h1>
+          <p class="game-subtitle">Huge Fiend (Monstrosity) • Chaotic Evil • CR 12</p>
+        </div>
+      </div>
+
+      <!-- Action & Utility Bar -->
+      <div class="top-controls ui-interactive">
+        <button id="rollD20Btn" class="action-btn dnd-btn-gold" title="Roll D20 Check">
+          🎲 Roll D20
+        </button>
+        <button id="statBlockBtn" class="action-btn dnd-btn-parchment" title="Open D&D 5e Monster Stat Block [B]">
+          📜 Stat Block
+        </button>
+        <button id="camBtn" class="action-btn" title="Toggle Scrying Camera [C]">
+          👁 Scrying Cam
+        </button>
+        <button id="resetCamBtn" class="action-btn" title="Reset View [R]">
+          ⟲ Recenter
+        </button>
+        <button id="muteBtn" class="action-btn" title="Toggle Bardsong Audio [M]">
+          🔊 Bardsong
+        </button>
+        <button id="fsBtn" class="action-btn" onclick="document.documentElement.requestFullscreen ? document.documentElement.requestFullscreen() : null" title="Tavern Fullscreen [F]">
+          ⛶ Fullscreen
+        </button>
+
+        <div class="tribute-badge" title="Adventurer's Tally">
+          <span class="badge-label">Tithe:</span>
+          <strong id="statOrgans">0</strong>
+          <span class="sep">⚔</span>
+          <span class="badge-label">Blood:</span>
+          <strong id="statBlood">0.0</strong> <span class="unit">L</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mid Area: Combat / Narrative Scroll Log & Whispers -->
+    <div class="mid-deck">
+      <!-- Left: Parchment Combat Log -->
+      <div class="combat-log-panel ui-interactive" id="combatLogPanel">
+        <div class="combat-log-header">
+          <span class="combat-log-icon">⚔</span>
+          <span class="combat-log-title">Campaign Chronicle</span>
+          <button id="clearLogBtn" class="combat-log-min" title="Clear Chronicle">✕</button>
+        </div>
+        <div class="combat-log-entries" id="combatLogEntries">
+          <div class="log-entry system">
+            <span class="log-time">[Init]</span> Cry Wolf stirs in the cavern abyss. Roll for Initiative!
+          </div>
+          <div class="log-entry lore">
+            <span class="log-time">[Lore]</span> "He remembers nothing but teeth and cold."
+          </div>
+        </div>
+      </div>
+
+      <!-- Center Poetic Whispers -->
+      <div id="whisperContainer" class="whisper-container">
+        <div class="whisper-scroll">
+          <span class="scroll-ornament left">❝</span>
+          <p id="whisperText" class="whisper-text">He breathes in the cold silence. Cast an offering.</p>
+          <span class="scroll-ornament right">❞</span>
+        </div>
+      </div>
+
+      <!-- Right: Quick Stat Reference Card -->
+      <div class="quick-stats-card ui-interactive">
+        <div class="qs-header">PASSIVE STATS</div>
+        <div class="qs-grid">
+          <div class="qs-item"><span class="lbl">AC</span><span class="val">18</span></div>
+          <div class="qs-item"><span class="lbl">HP</span><span class="val">210</span></div>
+          <div class="qs-item"><span class="lbl">SPEED</span><span class="val">50ft</span></div>
+          <div class="qs-item"><span class="lbl">SENSES</span><span class="val">Darkv. 120ft</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Dock: Boss Rage Gauge & D&D Spell / Item Slots -->
+    <footer class="bottom-dock">
+      <!-- Boss Rage / Hunger Bar -->
+      <div class="boss-bar-frame ui-interactive">
+        <div class="boss-dragon left">🐉</div>
+        <div class="boss-meter-core">
+          <div class="boss-bar-header">
+            <div class="boss-name-group">
+              <span class="boss-crown">👑</span>
+              <span class="boss-title-text">ABYSSAL FRENZY</span>
+            </div>
+            <div class="boss-dc-group">
+              <span class="dc-label">HUNGER DC:</span>
+              <span id="hungerStateText" class="dc-value">RESTLESS GNAWING (DC 15)</span>
+            </div>
+          </div>
+          <div class="meter-track" title="Cry Wolf hunger gauge. High frenzy forces him to stalk cursor.">
+            <div class="meter-notches">
+              <span class="notch" style="left: 30%;"><span class="notch-num">I</span></span>
+              <span class="notch" style="left: 65%;"><span class="notch-num">II</span></span>
+            </div>
+            <div id="meterFill" class="meter-fill"></div>
+          </div>
+        </div>
+        <div class="boss-dragon right">🐉</div>
+      </div>
+
+      <!-- D&D Spell / Inventory Action Bar -->
+      <div class="dnd-action-bar ui-interactive" id="organTray">
+        <!-- Slot 1: Heart -->
+        <div class="spell-slot-card active" data-organ="heart" id="organHeart" title="Press [1] to equip Heart of the Martyr">
+          <div class="slot-badge">[1]</div>
+          <div class="spell-school-tag necromancy">NECROMANCY</div>
+          <div class="slot-icon-frame">
+            <svg viewBox="0 0 100 100" fill="none">
+              <path d="M50 88C30 75 14 58 14 38C14 24 25 15 38 15C45 15 50 20 50 20C50 20 55 15 62 15C75 15 86 24 86 38C86 58 70 75 50 88Z" fill="#8f121d" stroke="#e62234" stroke-width="3"/>
+              <path d="M38 15V8M48 20V5M62 15V10" stroke="#b31422" stroke-width="4" stroke-linecap="round"/>
+              <circle cx="50" cy="42" r="12" fill="#520911" opacity="0.6"/>
+            </svg>
+          </div>
+          <span class="slot-item-name">Martyr Heart</span>
+          <span class="slot-item-level">Lvl 4 Component</span>
+          <!-- D&D Tooltip -->
+          <div class="dnd-tooltip">
+            <div class="tt-header">
+              <span class="tt-title">Heart of the Martyr</span>
+              <span class="tt-school">Wondrous Item (Rare)</span>
+            </div>
+            <div class="tt-body">
+              <p><strong>Casting Time:</strong> 1 Action</p>
+              <p><strong>Components:</strong> V, S, M (fresh cardiac muscle)</p>
+              <p class="tt-desc">Pulsates with dark arterial vitality. When cast before a starving beast, pacifies hunger by 45 points.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slot 2: Brain -->
+        <div class="spell-slot-card" data-organ="brain" id="organBrain" title="Press [2] to equip Cerebral Relic">
+          <div class="slot-badge">[2]</div>
+          <div class="spell-school-tag divination">DIVINATION</div>
+          <div class="slot-icon-frame">
+            <svg viewBox="0 0 100 100" fill="none">
+              <path d="M48 25C40 20 28 24 24 35C20 45 22 58 26 68C30 76 40 82 48 84V25Z" fill="#8a4855" stroke="#ba6878" stroke-width="3"/>
+              <path d="M52 25C60 20 72 24 76 35C80 45 78 58 74 68C70 76 60 82 52 84V25Z" fill="#8a4855" stroke="#ba6878" stroke-width="3"/>
+              <path d="M32 40C38 42 42 48 42 54M68 40C62 42 58 48 58 54M34 60C40 62 44 68 44 72M66 60C60 62 56 68 56 72" stroke="#4a1822" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <span class="slot-item-name">Cerebral Orb</span>
+          <span class="slot-item-level">Lvl 5 Component</span>
+          <!-- D&D Tooltip -->
+          <div class="dnd-tooltip">
+            <div class="tt-header">
+              <span class="tt-title">Cerebral Relic</span>
+              <span class="tt-school">Wondrous Item (Very Rare)</span>
+            </div>
+            <div class="tt-body">
+              <p><strong>Casting Time:</strong> 1 Action</p>
+              <p><strong>Components:</strong> V, M (pickled mind)</p>
+              <p class="tt-desc">A severed brain humming with psychic echo. Sating the beast with intellect prompts sorrowful aphorisms.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slot 3: Eyeball -->
+        <div class="spell-slot-card" data-organ="eyeball" id="organEye" title="Press [3] to equip Weeping Ocular">
+          <div class="slot-badge">[3]</div>
+          <div class="spell-school-tag evocation">EVOCATION</div>
+          <div class="slot-icon-frame">
+            <svg viewBox="0 0 100 100" fill="none">
+              <circle cx="48" cy="48" r="28" fill="#e3ded6" stroke="#9c9488" stroke-width="3"/>
+              <circle cx="48" cy="48" r="14" fill="#1b4d3e"/>
+              <circle cx="48" cy="48" r="6" fill="#080808"/>
+              <circle cx="45" cy="44" r="2.5" fill="#ffffff" opacity="0.8"/>
+              <path d="M48 76C48 84 55 92 68 95" stroke="#8f121d" stroke-width="5" stroke-linecap="round"/>
+              <path d="M26 40C32 42 36 45 36 48M68 44C62 46 58 48 58 50" stroke="#ba2233" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <span class="slot-item-name">Weeping Eye</span>
+          <span class="slot-item-level">Lvl 3 Component</span>
+          <!-- D&D Tooltip -->
+          <div class="dnd-tooltip">
+            <div class="tt-header">
+              <span class="tt-title">Ocular of the Damned</span>
+              <span class="tt-school">Wondrous Item (Uncommon)</span>
+            </div>
+            <div class="tt-body">
+              <p><strong>Casting Time:</strong> Bonus Action</p>
+              <p><strong>Components:</strong> S, M (vitreous fluid)</p>
+              <p class="tt-desc">Weeps blood perpetually. Splatters arterial gore upon impact with the stone ground.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slot 4: Viscera -->
+        <div class="spell-slot-card" data-organ="viscera" id="organViscera" title="Press [4] to equip Coiled Entrails">
+          <div class="slot-badge">[4]</div>
+          <div class="spell-school-tag conjuration">CONJURATION</div>
+          <div class="slot-icon-frame">
+            <svg viewBox="0 0 100 100" fill="none">
+              <path d="M25 40C20 55 35 75 55 70C70 65 80 50 72 38C65 28 45 30 40 45C35 60 55 60 60 52" stroke="#7a121f" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M25 40C20 55 35 75 55 70C70 65 80 50 72 38C65 28 45 30 40 45C35 60 55 60 60 52" stroke="#b32032" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <span class="slot-item-name">Coiled Entrails</span>
+          <span class="slot-item-level">Lvl 2 Component</span>
+          <!-- D&D Tooltip -->
+          <div class="dnd-tooltip">
+            <div class="tt-header">
+              <span class="tt-title">Coiled Entrails</span>
+              <span class="tt-school">Wondrous Item (Common)</span>
+            </div>
+            <div class="tt-body">
+              <p><strong>Casting Time:</strong> 1 Action</p>
+              <p><strong>Components:</strong> V, S, M (stench of death)</p>
+              <p class="tt-desc">Heavy wet intestines. Spills massive blood pools upon the cavern altar.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action Guide -->
+      <div class="instruction-bar">
+        <span><strong class="instruction-key">[Left Click]</strong> Cast Offering</span>
+        <span class="sep">❖</span>
+        <span><strong class="instruction-key">[Right Click + Drag]</strong> Orbit Camera</span>
+        <span class="sep">❖</span>
+        <span><strong class="instruction-key">[🎲 D20]</strong> Skill Check</span>
+        <span class="sep">❖</span>
+        <span><strong class="instruction-key">[B]</strong> Stat Block</span>
+        <span class="sep">❖</span>
+        <span><strong class="instruction-key">[Space]</strong> Quick Cast</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- D&D 5e Authentic Monster Stat Block Modal -->
+  <div id="statBlockModal" class="dnd-modal hidden">
+    <div class="modal-backdrop" id="modalBackdrop"></div>
+    <div class="stat-block-wrapper">
+      <div class="stat-block-container">
+        <!-- Top Bar Header -->
+        <div class="sb-header">
+          <h2 class="sb-monster-name">Cry Wolf</h2>
+          <div class="sb-type-line">Huge fiend (monstrosity), chaotic evil</div>
+          <button id="closeStatBlockBtn" class="sb-close-btn" title="Close [Esc]">✕</button>
+        </div>
+
+        <div class="taper-bar"></div>
+
+        <!-- Combat Core Stats -->
+        <div class="sb-vital-stats">
+          <div class="sb-vital-row"><strong>Armor Class</strong> 18 (natural armor)</div>
+          <div class="sb-vital-row"><strong>Hit Points</strong> 210 (20d12 + 80)</div>
+          <div class="sb-vital-row"><strong>Speed</strong> 50 ft., climb 30 ft.</div>
+        </div>
+
+        <div class="taper-bar"></div>
+
+        <!-- 6 Attributes Table -->
+        <div class="sb-ability-grid">
+          <div class="sb-ability-box">
+            <span class="ab-label">STR</span>
+            <span class="ab-val">22 (+6)</span>
+          </div>
+          <div class="sb-ability-box">
+            <span class="ab-label">DEX</span>
+            <span class="ab-val">16 (+3)</span>
+          </div>
+          <div class="sb-ability-box">
+            <span class="ab-label">CON</span>
+            <span class="ab-val">20 (+5)</span>
+          </div>
+          <div class="sb-ability-box">
+            <span class="ab-label">INT</span>
+            <span class="ab-val">8 (-1)</span>
+          </div>
+          <div class="sb-ability-box">
+            <span class="ab-label">WIS</span>
+            <span class="ab-val">14 (+2)</span>
+          </div>
+          <div class="sb-ability-box">
+            <span class="ab-label">CHA</span>
+            <span class="ab-val">18 (+4)</span>
+          </div>
+        </div>
+
+        <div class="taper-bar"></div>
+
+        <!-- Senses & Resistances -->
+        <div class="sb-properties">
+          <div><strong>Saving Throws</strong> Str +10, Con +9, Wis +6</div>
+          <div><strong>Skills</strong> Athletics +10, Perception +6, Stealth +7</div>
+          <div><strong>Damage Resistances</strong> cold, fire, necrotic; bludgeoning, piercing, and slashing from nonmagical attacks</div>
+          <div><strong>Damage Immunities</strong> poison</div>
+          <div><strong>Condition Immunities</strong> charmed, frightened, poisoned</div>
+          <div><strong>Senses</strong> truesight 60 ft., darkvision 120 ft., passive Perception 16</div>
+          <div><strong>Languages</strong> Abyssal, telepathy 120 ft.</div>
+          <div><strong>Challenge</strong> 12 (8,400 XP) • <strong>Proficiency Bonus</strong> +4</div>
+        </div>
+
+        <div class="taper-bar"></div>
+
+        <!-- Traits -->
+        <div class="sb-traits">
+          <p><em><strong>Abyssal Void.</strong></em> The wolf cannot be slain so long as hunger gnaws within its hollow chest. When reduced to 0 hit points, it enters a catatonic frenzy until a fresh organ offering is made.</p>
+          <p><em><strong>Blood Frenzy.</strong></em> The wolf has advantage on melee attack rolls against any creature that doesn't have all its hit points.</p>
+          <p><em><strong>Keen Hearing and Smell.</strong></em> The wolf has advantage on Wisdom (Perception) checks that rely on hearing or smell, and tracks the adventurer's cursor across planar boundaries.</p>
+        </div>
+
+        <div class="sb-section-title">ACTIONS</div>
+
+        <div class="sb-actions">
+          <p><em><strong>Multiattack.</strong></em> Cry Wolf makes three attacks: one with its Bite and two with its Claws.</p>
+          <p><em><strong>Abyssal Bite.</strong></em> <em>Melee Weapon Attack:</em> +10 to hit, reach 10 ft., one target. <em>Hit:</em> 28 (4d10 + 6) piercing damage plus 14 (4d6) necrotic damage. If the target is an organ offering, it is instantly consumed.</p>
+          <p><em><strong>Sorrowful Howl (Recharge 5–6).</strong></em> The wolf emits a mournful wail that echoes through the cavern. Each creature within 60 ft. must succeed on a DC 16 Wisdom saving throw or become frightened for 1 minute.</p>
+        </div>
+
+        <div class="sb-section-title">LEGENDARY ACTIONS</div>
+
+        <div class="sb-traits">
+          <p>The wolf can take 3 legendary actions, choosing from the options below. Only one legendary action can be used at a time and only at the end of another creature's turn.</p>
+          <p><em><strong>Stalk Cursor.</strong></em> The wolf moves up to half its speed directly toward the adventurer's cursor.</p>
+          <p><em><strong>Snap Jaws (Costs 2 Actions).</strong></em> The wolf snaps viciously, producing an arterial gore splatter within 5 feet.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Atmospheric Loading Screen (RPG Campaign Prologue) -->
+  <div id="loadingScreen" class="loading-screen">
+    <div class="campaign-seal">
+      <span class="seal-d20">🎲</span>
+    </div>
+    <div class="loading-campaign-title">DUNGEONS &amp; DRAGONS</div>
+    <h2 class="loading-title">Cry Wolf</h2>
+    <div class="campaign-divider">❖ ❖ ❖</div>
+    <p class="loading-quote">
+      "Deep within the hollow crags of the Lower Planes, the beast awaits.<br>
+      Prepare your offerings. Steel your mind."
+    </p>
+
+    <div class="loading-bar-container">
+      <div id="loadingBar" class="loading-bar-fill"></div>
+    </div>
+    <span id="loadingStatus" class="loading-status">COMMUNING WITH THE DUNGEON MASTER...</span>
+
+    <button id="enterBtn" class="enter-btn">
+      Roll Initiative &amp; Enter
+    </button>
+
+    <span class="sound-prompt">Equip headphones for full dungeon master soundscape</span>
+  </div>
+
+  <!-- Three.js Import Map -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "./libs/three.module.js",
+      "three/": "./libs/"
+    }
+  }
+  </script>
+
+  <!-- Application Entry Point -->
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

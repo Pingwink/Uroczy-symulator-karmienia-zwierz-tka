@@ -1,0 +1,1196 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;900&family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  /* D&D 5e Color Palette */
+  --dnd-red-dark: #58180d;
+  --dnd-red-core: #7a2012;
+  --dnd-red-bright: #c5311b;
+  --dnd-red-glow: #e63920;
+
+  --dnd-gold-bright: #f5d061;
+  --dnd-gold-core: #d4af37;
+  --dnd-gold-dark: #8c6d1d;
+  --dnd-gold-muted: rgba(212, 175, 55, 0.35);
+
+  --parchment-light: #fdf1dc;
+  --parchment-mid: #e8d5b5;
+  --parchment-dark: #221811;
+  --parchment-card: #18110b;
+
+  --ink-dark: #120b06;
+  --ink-muted: #8c7b6c;
+  --ink-bone: #efe8dc;
+
+  --font-dnd-title: 'Cinzel', serif;
+  --font-dnd-body: 'Crimson Pro', serif;
+  --font-sans: 'Inter', sans-serif;
+
+  --border-dnd-gold: 1px solid var(--dnd-gold-dark);
+  --border-dnd-leather: 2px solid #3d2616;
+  --shadow-parchment: 0 12px 40px rgba(0, 0, 0, 0.95), 0 0 25px rgba(212, 175, 55, 0.15);
+  --shadow-rage: 0 0 25px rgba(230, 57, 32, 0.5), inset 0 0 15px rgba(122, 32, 18, 0.4);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #050406;
+  color: var(--ink-bone);
+  font-family: var(--font-dnd-body);
+  cursor: crosshair;
+}
+
+/* Background Canvas */
+#bgCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* 3D WebGL Canvas */
+#webglCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  outline: none;
+}
+
+/* Blood Overlay Canvas */
+#bloodCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+}
+
+/* Atmospheric Vignette */
+.vignette-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 4;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 50%, transparent 35%, rgba(6, 4, 7, 0.7) 75%, rgba(2, 1, 3, 0.98) 100%);
+  mix-blend-mode: multiply;
+}
+
+.starvation-pulse {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  pointer-events: none;
+  box-shadow: inset 0 0 120px rgba(197, 49, 27, 0.45);
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+
+/* D&D Arcane Targeting Reticle */
+.cursor-reticle {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 40px;
+  height: 40px;
+  pointer-events: none;
+  z-index: 999;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.9;
+  transition: transform 0.05s ease-out;
+}
+
+.reticle-ring {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 1.5px solid var(--dnd-gold-core);
+  border-radius: 50%;
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.5);
+  animation: arcane-spin 14s infinite linear;
+}
+
+.reticle-runes {
+  position: absolute;
+  font-size: 0.6rem;
+  color: var(--dnd-gold-bright);
+  letter-spacing: 3px;
+  opacity: 0.8;
+  animation: arcane-spin 14s infinite linear reverse;
+}
+
+.reticle-dot {
+  width: 5px;
+  height: 5px;
+  background-color: var(--dnd-red-bright);
+  border-radius: 50%;
+  box-shadow: 0 0 8px var(--dnd-red-bright);
+}
+
+@keyframes arcane-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Main UI Container */
+.ui-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 30px;
+}
+
+.ui-interactive {
+  pointer-events: auto;
+}
+
+/* 1. Top D&D Encounter Header */
+.top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  gap: 20px;
+}
+
+.dnd-encounter-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: var(--parchment-card);
+  padding: 10px 20px;
+  border: var(--border-dnd-leather);
+  border-radius: 6px;
+  box-shadow: var(--shadow-parchment);
+  position: relative;
+}
+
+.dnd-encounter-card::before {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px; right: 2px; bottom: 2px;
+  border: 1px solid var(--dnd-gold-muted);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+.heraldic-shield {
+  width: 44px;
+  height: 50px;
+  background: linear-gradient(180deg, var(--dnd-red-core), var(--dnd-red-dark));
+  border: 2px solid var(--dnd-gold-core);
+  border-radius: 0 0 22px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
+}
+
+.encounter-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.encounter-badge {
+  font-family: var(--font-dnd-title);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--dnd-gold-bright);
+  text-transform: uppercase;
+}
+
+.game-title {
+  font-family: var(--font-dnd-title);
+  font-size: 1.9rem;
+  letter-spacing: 0.18em;
+  color: var(--parchment-light);
+  font-weight: 900;
+  text-transform: uppercase;
+  text-shadow: 0 0 15px rgba(212, 175, 55, 0.4), 0 2px 8px #000;
+  line-height: 1.1;
+}
+
+.game-subtitle {
+  font-family: var(--font-dnd-body);
+  font-size: 0.95rem;
+  font-style: italic;
+  color: var(--dnd-gold-core);
+  letter-spacing: 0.05em;
+}
+
+/* Action Controls Bar */
+.top-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.action-btn {
+  background: var(--parchment-card);
+  border: 1px solid var(--dnd-gold-dark);
+  color: var(--ink-bone);
+  padding: 8px 14px;
+  border-radius: 4px;
+  font-family: var(--font-dnd-title);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.8);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.action-btn:hover {
+  background: #332014;
+  border-color: var(--dnd-gold-bright);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(212, 175, 55, 0.3);
+}
+
+.action-btn:active {
+  transform: translateY(1px);
+}
+
+.action-btn.active {
+  background: var(--dnd-red-core);
+  border-color: var(--dnd-red-bright);
+  color: #fff;
+  box-shadow: 0 0 12px var(--dnd-red-bright);
+}
+
+.dnd-btn-gold {
+  background: linear-gradient(180deg, #3d2c14, #261b0c);
+  border-color: var(--dnd-gold-core);
+  color: var(--dnd-gold-bright);
+  font-weight: 700;
+}
+
+.dnd-btn-gold:hover {
+  background: linear-gradient(180deg, #59401d, #362612);
+  box-shadow: 0 0 16px rgba(212, 175, 55, 0.5);
+}
+
+.dnd-btn-parchment {
+  background: linear-gradient(180deg, #2b1f15, #1c140d);
+  border-color: var(--dnd-gold-muted);
+}
+
+/* Tribute Tally Badge */
+.tribute-badge {
+  background: var(--parchment-card);
+  border: var(--border-dnd-leather);
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-family: var(--font-dnd-title);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: var(--shadow-parchment);
+}
+
+.tribute-badge .badge-label {
+  color: var(--dnd-gold-dark);
+}
+
+.tribute-badge strong {
+  color: var(--dnd-red-bright);
+  font-size: 0.85rem;
+}
+
+.tribute-badge .sep {
+  color: var(--dnd-gold-core);
+  opacity: 0.6;
+}
+
+.tribute-badge .unit {
+  font-size: 0.65rem;
+  color: var(--ink-muted);
+}
+
+/* 2. Mid Deck: Combat Log, Whispers & Quick Stats */
+.mid-deck {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  width: 100%;
+  gap: 20px;
+}
+
+/* Left: Parchment Combat Log */
+.combat-log-panel {
+  background: rgba(22, 16, 11, 0.92);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: var(--border-dnd-leather);
+  border-radius: 6px;
+  width: 320px;
+  max-height: 220px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: var(--shadow-parchment);
+  overflow: hidden;
+}
+
+.combat-log-header {
+  background: linear-gradient(180deg, #382415, #24170d);
+  border-bottom: 1px solid var(--dnd-gold-dark);
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.combat-log-title {
+  font-family: var(--font-dnd-title);
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  color: var(--dnd-gold-bright);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.combat-log-min {
+  background: transparent;
+  border: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+}
+
+.combat-log-entries {
+  padding: 10px 12px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  color: var(--parchment-light);
+}
+
+.log-entry {
+  border-left: 2px solid var(--dnd-gold-dark);
+  padding-left: 8px;
+}
+
+.log-entry.system { border-color: var(--dnd-gold-core); }
+.log-entry.damage { border-color: var(--dnd-red-bright); color: #ffb3aa; }
+.log-entry.dice { border-color: #55aaff; color: #d0e8ff; font-weight: 600; }
+.log-entry.lore { border-color: #b088d0; font-style: italic; color: #e0d0f0; }
+
+.log-time {
+  font-family: var(--font-dnd-title);
+  font-size: 0.68rem;
+  color: var(--dnd-gold-bright);
+  margin-right: 4px;
+}
+
+/* Center Poetic Whispers */
+.whisper-container {
+  flex: 1;
+  text-align: center;
+  pointer-events: none;
+  max-width: 520px;
+}
+
+.whisper-scroll {
+  background: rgba(18, 12, 8, 0.75);
+  border: 1px solid var(--dnd-gold-muted);
+  border-radius: 4px;
+  padding: 8px 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.8);
+}
+
+.scroll-ornament {
+  color: var(--dnd-gold-core);
+  font-size: 1.1rem;
+  opacity: 0.7;
+}
+
+.whisper-text {
+  font-family: var(--font-dnd-body);
+  font-style: italic;
+  font-size: 1.25rem;
+  color: var(--parchment-light);
+  letter-spacing: 0.05em;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.95);
+  opacity: 1;
+  transition: opacity 1.2s ease;
+}
+
+/* Right: Quick Stat Reference Card */
+.quick-stats-card {
+  background: rgba(22, 16, 11, 0.92);
+  border: var(--border-dnd-leather);
+  border-radius: 6px;
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: var(--shadow-parchment);
+}
+
+.qs-header {
+  font-family: var(--font-dnd-title);
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  color: var(--dnd-gold-dark);
+  font-weight: 700;
+  border-bottom: 1px solid rgba(212, 175, 55, 0.2);
+  padding-bottom: 4px;
+}
+
+.qs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 12px;
+}
+
+.qs-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+
+.qs-item .lbl {
+  color: var(--dnd-gold-core);
+  font-family: var(--font-dnd-title);
+  font-weight: 600;
+}
+
+.qs-item .val {
+  color: var(--parchment-light);
+  font-weight: 700;
+}
+
+/* 3. Bottom Dock: Boss Rage Gauge & D&D Action Bar */
+.bottom-dock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+/* Boss Rage / Hunger Bar */
+.boss-bar-frame {
+  background: var(--parchment-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: var(--border-dnd-leather);
+  border-radius: 8px;
+  padding: 10px 22px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: var(--shadow-parchment);
+  min-width: 500px;
+  max-width: 660px;
+  width: 100%;
+  position: relative;
+}
+
+.boss-dragon {
+  font-size: 1.4rem;
+  filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.5));
+}
+
+.boss-dragon.right {
+  transform: scaleX(-1);
+}
+
+.boss-meter-core {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.boss-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.boss-name-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.boss-title-text {
+  font-family: var(--font-dnd-title);
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  color: var(--dnd-gold-bright);
+  font-weight: 700;
+}
+
+.boss-dc-group {
+  display: flex;
+  gap: 6px;
+  font-size: 0.75rem;
+}
+
+.dc-label {
+  color: var(--dnd-gold-dark);
+  font-family: var(--font-dnd-title);
+}
+
+.dc-value {
+  color: var(--dnd-red-bright);
+  font-family: var(--font-dnd-title);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.meter-track {
+  height: 14px;
+  background: #110905;
+  border: 1px solid var(--dnd-gold-dark);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.95);
+}
+
+.meter-notches {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.meter-notches .notch {
+  position: absolute;
+  top: 0; bottom: 0;
+  width: 1px;
+  background: rgba(212, 175, 55, 0.5);
+  box-shadow: 0 0 4px #000;
+}
+
+.meter-notches .notch-num {
+  position: absolute;
+  top: -1px; left: 3px;
+  font-family: var(--font-dnd-title);
+  font-size: 0.55rem;
+  color: var(--dnd-gold-bright);
+}
+
+.meter-fill {
+  height: 100%;
+  width: 50%;
+  background: linear-gradient(90deg, #4d1008, #8c1e11 50%, #e63920 100%);
+  box-shadow: 0 0 18px rgba(230, 57, 32, 0.85);
+  border-radius: 3px;
+  transition: width 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+  position: relative;
+  z-index: 1;
+}
+
+.meter-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 230, 180, 0.4), transparent);
+  animation: shine 2.2s infinite linear;
+}
+
+@keyframes shine {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* 4. D&D Spell / Inventory Action Bar */
+.dnd-action-bar {
+  display: flex;
+  gap: 14px;
+  padding: 8px 16px;
+  background: var(--parchment-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: var(--border-dnd-leather);
+  border-radius: 8px;
+  box-shadow: var(--shadow-parchment);
+}
+
+.spell-slot-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px;
+  background: rgba(36, 25, 17, 0.85);
+  border: 1px solid var(--dnd-gold-dark);
+  border-radius: 6px;
+  cursor: grab;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  min-width: 110px;
+}
+
+.spell-slot-card:hover {
+  background: rgba(60, 38, 22, 0.95);
+  border-color: var(--dnd-gold-bright);
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.8), 0 0 15px rgba(212, 175, 55, 0.4);
+}
+
+.spell-slot-card.active {
+  border-color: var(--dnd-red-bright);
+  background: linear-gradient(180deg, #4a1c12, #290e08);
+  box-shadow: 0 0 20px rgba(230, 57, 32, 0.6), inset 0 0 10px rgba(230, 57, 32, 0.4);
+}
+
+.slot-badge {
+  position: absolute;
+  top: 4px;
+  left: 6px;
+  font-family: var(--font-dnd-title);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--dnd-gold-bright);
+}
+
+.spell-school-tag {
+  font-family: var(--font-dnd-title);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  padding: 1px 6px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+.spell-school-tag.necromancy { background: #3d0c14; color: #ff8595; border: 1px solid #7a1222; }
+.spell-school-tag.divination { background: #1f143d; color: #c4aaff; border: 1px solid #4a2d8a; }
+.spell-school-tag.evocation { background: #0c2c3d; color: #85d5ff; border: 1px solid #14597a; }
+.spell-school-tag.conjuration { background: #2c200a; color: #ffd285; border: 1px solid #6b4d14; }
+
+.slot-icon-frame {
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, rgba(0, 0, 0, 0.6), transparent);
+  border-radius: 50%;
+}
+
+.slot-icon-frame svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.8));
+  transition: transform 0.25s ease;
+}
+
+.spell-slot-card:hover .slot-icon-frame svg {
+  transform: scale(1.15);
+}
+
+.slot-item-name {
+  font-family: var(--font-dnd-title);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--parchment-light);
+  font-weight: 600;
+  text-align: center;
+}
+
+.slot-item-level {
+  font-size: 0.65rem;
+  color: var(--ink-muted);
+}
+
+/* D&D Item Tooltip */
+.dnd-tooltip {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  background: #1c130b;
+  border: 1.5px solid var(--dnd-gold-dark);
+  border-radius: 6px;
+  width: 240px;
+  padding: 12px 14px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: all 0.25s ease;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.95);
+  z-index: 50;
+  text-align: left;
+}
+
+.spell-slot-card:hover .dnd-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.tt-header {
+  border-bottom: 1px solid var(--dnd-gold-muted);
+  padding-bottom: 6px;
+  margin-bottom: 6px;
+  display: flex;
+  flex-direction: column;
+}
+
+.tt-title {
+  font-family: var(--font-dnd-title);
+  font-size: 0.95rem;
+  color: var(--dnd-gold-bright);
+  font-weight: 700;
+}
+
+.tt-school {
+  font-family: var(--font-dnd-body);
+  font-style: italic;
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+
+.tt-body {
+  font-family: var(--font-dnd-body);
+  font-size: 0.88rem;
+  line-height: 1.4;
+  color: var(--parchment-light);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tt-desc {
+  font-style: italic;
+  color: #c9bea9;
+  border-top: 1px dotted rgba(212, 175, 55, 0.25);
+  padding-top: 6px;
+  margin-top: 4px;
+}
+
+/* Quick Action Guide */
+.instruction-bar {
+  font-family: var(--font-dnd-body);
+  font-size: 0.95rem;
+  color: var(--dnd-gold-core);
+  letter-spacing: 0.08em;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  text-shadow: 0 2px 6px #000;
+}
+
+.instruction-bar .sep {
+  color: var(--dnd-gold-dark);
+  font-size: 0.75rem;
+}
+
+.instruction-key {
+  color: var(--dnd-gold-bright);
+  font-family: var(--font-dnd-title);
+  font-weight: 700;
+}
+
+/* 5. D20 Roll Popover */
+.dice-banner {
+  position: fixed;
+  top: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, #2b1c10, #170e07);
+  border: 2px solid var(--dnd-gold-core);
+  border-radius: 8px;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  z-index: 120;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.95), 0 0 30px rgba(212, 175, 55, 0.4);
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dice-banner.hidden {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-20px);
+  pointer-events: none;
+}
+
+.dice-icon-box {
+  width: 52px;
+  height: 52px;
+}
+
+.d20-svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 0 10px rgba(212, 175, 55, 0.6));
+  animation: d20-pop 0.6s ease-out;
+}
+
+@keyframes d20-pop {
+  0% { transform: scale(0.6) rotate(-45deg); }
+  60% { transform: scale(1.2) rotate(15deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+
+.dice-text-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dice-title {
+  font-family: var(--font-dnd-title);
+  font-size: 0.78rem;
+  letter-spacing: 0.18em;
+  color: var(--dnd-gold-bright);
+  font-weight: 700;
+}
+
+.dice-desc {
+  font-family: var(--font-dnd-body);
+  font-size: 1.15rem;
+  color: var(--parchment-light);
+  font-weight: 600;
+}
+
+/* 6. Authentic D&D 5e Monster Stat Block Modal */
+.dnd-modal {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 150;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 1;
+  visibility: visible;
+  transition: all 0.35s ease;
+}
+
+.dnd-modal.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.modal-backdrop {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(5, 3, 4, 0.85);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.stat-block-wrapper {
+  position: relative;
+  z-index: 2;
+  width: 90%;
+  max-width: 600px;
+  max-height: 85vh;
+  overflow-y: auto;
+  border-radius: 6px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.98);
+}
+
+/* Classic D&D 5e Parchment Stat Block Styling */
+.stat-block-container {
+  background: #fdf1dc;
+  color: #1a0e05;
+  border: 1px solid #d4af37;
+  border-left: 4px solid var(--dnd-red-core);
+  border-right: 4px solid var(--dnd-red-core);
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: inset 0 0 40px rgba(180, 140, 80, 0.25);
+  font-family: var(--font-dnd-body);
+}
+
+.sb-header {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.sb-monster-name {
+  font-family: var(--font-dnd-title);
+  font-size: 2.1rem;
+  color: var(--dnd-red-dark);
+  font-weight: 700;
+  margin: 0;
+  line-height: 1;
+}
+
+.sb-type-line {
+  font-style: italic;
+  font-size: 1.05rem;
+  color: #4a3828;
+  margin-top: 4px;
+}
+
+.sb-close-btn {
+  position: absolute;
+  top: -4px;
+  right: 0;
+  background: transparent;
+  border: none;
+  font-size: 1.4rem;
+  color: var(--dnd-red-dark);
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.sb-close-btn:hover {
+  color: var(--dnd-red-bright);
+}
+
+/* Classic D&D Red Taper Bar */
+.taper-bar {
+  height: 4px;
+  background: radial-gradient(ellipse at center, var(--dnd-red-core) 0%, transparent 85%);
+  margin: 4px 0;
+}
+
+.sb-vital-stats {
+  font-size: 1.05rem;
+  color: var(--dnd-red-dark);
+  line-height: 1.45;
+}
+
+.sb-vital-stats strong {
+  color: var(--dnd-red-dark);
+}
+
+/* 6 Attributes Grid */
+.sb-ability-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 6px;
+  text-align: center;
+  margin: 4px 0;
+}
+
+.sb-ability-box {
+  display: flex;
+  flex-direction: column;
+  background: rgba(120, 30, 20, 0.08);
+  border: 1px solid rgba(120, 30, 20, 0.2);
+  border-radius: 4px;
+  padding: 6px 2px;
+}
+
+.ab-label {
+  font-family: var(--font-dnd-title);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--dnd-red-dark);
+}
+
+.ab-val {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #1a0e05;
+}
+
+.sb-properties {
+  font-size: 1rem;
+  line-height: 1.45;
+  color: #2b190f;
+}
+
+.sb-properties strong {
+  color: var(--dnd-red-dark);
+}
+
+.sb-traits, .sb-actions {
+  font-size: 1.05rem;
+  line-height: 1.5;
+  color: #24140b;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sb-traits strong, .sb-actions strong {
+  color: #1a0e05;
+}
+
+.sb-section-title {
+  font-family: var(--font-dnd-title);
+  font-size: 1.3rem;
+  color: var(--dnd-red-dark);
+  border-bottom: 1.5px solid var(--dnd-red-dark);
+  padding-bottom: 2px;
+  margin-top: 8px;
+  letter-spacing: 0.05em;
+}
+
+/* 7. Loading Screen (RPG Campaign Prologue) */
+.loading-screen {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  z-index: 200;
+  background-color: #080608;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  transition: opacity 1s cubic-bezier(0.16, 1, 0.3, 1), visibility 1s;
+}
+
+.loading-screen.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.campaign-seal {
+  font-size: 3rem;
+  filter: drop-shadow(0 0 20px rgba(212, 175, 55, 0.7));
+  animation: pulse-crest 2.5s infinite alternate ease-in-out;
+}
+
+@keyframes pulse-crest {
+  0% { transform: scale(0.9); opacity: 0.7; }
+  100% { transform: scale(1.1); opacity: 1; }
+}
+
+.loading-campaign-title {
+  font-family: var(--font-dnd-title);
+  font-size: 0.95rem;
+  letter-spacing: 0.4em;
+  color: var(--dnd-gold-bright);
+  font-weight: 700;
+}
+
+.loading-title {
+  font-family: var(--font-dnd-title);
+  font-size: 3rem;
+  letter-spacing: 0.25em;
+  color: var(--parchment-light);
+  text-transform: uppercase;
+  text-shadow: 0 0 30px rgba(212, 175, 55, 0.6);
+  font-weight: 900;
+}
+
+.campaign-divider {
+  color: var(--dnd-gold-core);
+  letter-spacing: 0.3em;
+  opacity: 0.8;
+}
+
+.loading-quote {
+  font-family: var(--font-dnd-body);
+  font-style: italic;
+  font-size: 1.25rem;
+  color: var(--dnd-gold-muted);
+  max-width: 500px;
+  text-align: center;
+  line-height: 1.6;
+}
+
+.loading-bar-container {
+  width: 380px;
+  height: 8px;
+  background: #1a100a;
+  border: 1px solid var(--dnd-gold-dark);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.loading-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #58180d, #d4af37);
+  box-shadow: 0 0 14px #d4af37;
+  transition: width 0.2s ease;
+}
+
+.loading-status {
+  font-family: var(--font-dnd-title);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  color: var(--dnd-gold-bright);
+}
+
+.enter-btn {
+  display: none;
+  background: linear-gradient(180deg, #7a2012, #4d1008);
+  border: 2px solid var(--dnd-gold-core);
+  color: var(--dnd-gold-bright);
+  padding: 14px 44px;
+  border-radius: 4px;
+  font-family: var(--font-dnd-title);
+  font-size: 1.1rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+
+.enter-btn:hover {
+  background: linear-gradient(180deg, #992817, #66150b);
+  box-shadow: 0 0 45px rgba(212, 175, 55, 0.85);
+  transform: scale(1.05);
+}
+
+.sound-prompt {
+  font-family: var(--font-dnd-body);
+  font-style: italic;
+  font-size: 0.9rem;
+  color: var(--ink-muted);
+}

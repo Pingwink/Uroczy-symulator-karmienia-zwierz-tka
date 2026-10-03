@@ -1,0 +1,18 @@
+# Temporary databases and cache
+*.db
+*.sqlite3
+__pycache__/
+*.pyc
+
+# Local server / scripts
+server.py
+check_bounds.py
+convert_textures.py
+create_2k_normal.py
+inspect_fbx.py
+inspect_geo.py
+test_load.html
+pyrefly.toml
+
+# Heavy raw uncompressed TGA textures (app uses optimized .webp in /textures/)
+CRY_WOLF/TEXTURES/
